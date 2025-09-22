@@ -1,0 +1,42 @@
+name: ST-Bar Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get latest commit message
+      id: commit
+      run: |
+        COMMIT_MSG=$(git log -1 --pretty=%B)
+        echo "message=$COMMIT_MSG" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: auto-${{ github.run_number }}
+        name: Auto Release ${{ github.run_number }}
+        body: |
+          Automatic release triggered by index.html update
+
+          Latest commit: ${{ steps.commit.outputs.message }}
+
+          ## Changes
+          - Updated status-bar component
+        draft: false
+        prerelease: false
+        files: |
+          ./index.html
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
