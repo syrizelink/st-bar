@@ -206,14 +206,33 @@ function useImageCache() {
                 resolve();
                 return;
             }
-            const img = new Image();
-            img.src = imageUrl;
-            img.setAttribute('data-cache-url', imageUrl);
-            img.style.display = 'none'; // 隐藏图片，不影响页面布局
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error(`Failed to load image: ${imageUrl}`));
-            // 将图片添加到DOM中以确保缓存生效
-            document.body.appendChild(img);
+            // 使用fetch API设置referer头
+            fetch(imageUrl, {
+                headers: {
+                    Referer: 'https://sillytavern.app',
+                },
+            })
+                .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load image: ${imageUrl}`);
+                }
+                return response.blob();
+            })
+                .then(blob => {
+                const blobUrl = URL.createObjectURL(blob);
+                const img = new Image();
+                img.src = blobUrl;
+                img.setAttribute('data-cache-url', imageUrl);
+                img.setAttribute('data-blob-url', blobUrl);
+                img.style.display = 'none'; // 隐藏图片，不影响页面布局
+                img.onload = () => resolve();
+                img.onerror = () => reject(new Error(`Failed to load image: ${imageUrl}`));
+                // 将图片添加到DOM中以确保缓存生效
+                document.body.appendChild(img);
+            })
+                .catch(error => {
+                reject(error);
+            });
         });
     };
     /**
