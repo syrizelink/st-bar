@@ -100,7 +100,7 @@ var exportHelper = __webpack_require__(341);
 ;
 
 
-const __exports__ = /*#__PURE__*/(0,exportHelper/* default */.A)(TabBarvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-031c1920"]])
+const __exports__ = /*#__PURE__*/(0,exportHelper/* default */.A)(TabBarvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-7b9313c1"]])
 
 /* harmony default export */ const TabBar = (__exports__);
 ;// ./src/status-bar/composables/useMvuStatData.ts
@@ -133,6 +133,218 @@ function useMvuStatData() {
     return {
         stat,
         refresh,
+    };
+}
+
+;// external "https://testingcf.jsdelivr.net/npm/@vueuse/core/+esm"
+
+;// ./src/status-bar/composables/useImageCache.ts
+
+
+/**
+ * 图片缓存管理工具类
+ * 结合 useLocalStorage 持久化图片加载状态 + 浏览器缓存机制优化图片加载
+ */
+function useImageCache() {
+    // 图标基础URL
+    const ICON_BASE_URL = 'https://st.cdn.syrizelink.top/';
+    // 使用 useLocalStorage 持久化已缓存的图片列表
+    const cachedImages = useLocalStorage('image-cache-cached-images', []);
+    // 当前加载状态
+    const state = (0,external_Vue_namespaceObject.ref)({
+        isLoading: false,
+        error: null,
+    });
+    /**
+     * 计算属性：是否正在加载
+     */
+    const isLoading = (0,external_Vue_namespaceObject.computed)(() => state.value.isLoading);
+    /**
+     * 计算属性：错误信息
+     */
+    const error = (0,external_Vue_namespaceObject.computed)(() => state.value.error);
+    /**
+     * 计算属性：是否所有图片都已缓存
+     */
+    const isLoaded = (0,external_Vue_namespaceObject.computed)(() => cachedImages.value.length > 0);
+    /**
+     * 预加载图片到浏览器缓存
+     * @param imageUrls 图片URL数组
+     */
+    const preloadImages = async (imageUrls) => {
+        try {
+            state.value.isLoading = true;
+            state.value.error = null;
+            // 过滤出未缓存的图片
+            const uncachedUrls = imageUrls.filter(url => !cachedImages.value.includes(url));
+            if (uncachedUrls.length === 0) {
+                state.value.isLoading = false;
+                return;
+            }
+            // 使用 Promise.all 并行加载图片
+            const loadPromises = uncachedUrls.map(url => preloadSingleImage(url));
+            await Promise.all(loadPromises);
+            // 添加到已缓存图片列表（持久化存储）
+            cachedImages.value.push(...uncachedUrls);
+        }
+        catch (err) {
+            state.value.error = err instanceof Error ? err.message : 'Unknown image loading error';
+        }
+        finally {
+            state.value.isLoading = false;
+        }
+    };
+    /**
+     * 预加载单张图片
+     * @param imageUrl 图片URL
+     */
+    const preloadSingleImage = (imageUrl) => {
+        return new Promise((resolve, reject) => {
+            // 检查是否已经存在相同的图片元素
+            const existingImg = document.querySelector(`img[data-cache-url="${imageUrl}"]`);
+            if (existingImg) {
+                resolve();
+                return;
+            }
+            const img = new Image();
+            img.src = imageUrl;
+            img.setAttribute('data-cache-url', imageUrl);
+            img.style.display = 'none'; // 隐藏图片，不影响页面布局
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error(`Failed to load image: ${imageUrl}`));
+            // 将图片添加到DOM中以确保缓存生效
+            document.body.appendChild(img);
+        });
+    };
+    /**
+     * 检查图片是否已缓存
+     * @param imageUrl 图片URL
+     */
+    const isImageCached = (imageUrl) => {
+        return cachedImages.value.includes(imageUrl);
+    };
+    /**
+     * 获取图片缓存状态
+     * @param imageUrl 图片URL
+     */
+    const getImageCacheStatus = (imageUrl) => {
+        return {
+            isLoading: state.value.isLoading,
+            isCached: isImageCached(imageUrl),
+            error: state.value.error,
+        };
+    };
+    /**
+     * 强制刷新图片缓存
+     */
+    const refreshImageCache = () => {
+        // 清除已缓存的图片记录
+        cachedImages.value = [];
+        state.value.error = null;
+        // 移除缓存的图片元素
+        const cachedImgElements = document.querySelectorAll('img[data-cache-url]');
+        cachedImgElements.forEach(img => img.remove());
+    };
+    /**
+     * 获取缓存统计信息
+     */
+    const getCacheStats = () => {
+        return {
+            cachedImages: cachedImages.value.length,
+            imageList: [...cachedImages.value],
+            lastError: state.value.error,
+            storageKey: 'image-cache-cached-images',
+        };
+    };
+    /**
+     * 清除所有缓存数据
+     */
+    const clearAllCache = () => {
+        refreshImageCache();
+        // 清除 localStorage 中的缓存记录
+        cachedImages.value = [];
+    };
+    /**
+     * 获取完整的图标URL
+     * @param iconName 图标名称（如 'sword.png'）
+     */
+    const getIconUrl = (iconName) => {
+        return `${ICON_BASE_URL}icon/${iconName}`;
+    };
+    /**
+     * 预加载物品图标
+     * 从 useItemIcon.ts 中提取所有图标URL并预加载
+     */
+    const preloadItemIcons = async () => {
+        // 所有唯一图标名称（已去重）
+        const allIconNames = [
+            // 武器和护甲图标
+            'sword.png',
+            'axe.png',
+            'mace.png',
+            'dagger.png',
+            'polearm.png',
+            'bow.png',
+            'crossbow.png',
+            'staff.png',
+            'wand.png',
+            'exotic.png',
+            'heavy.png',
+            'medium.png',
+            'light.png',
+            'cloth.png',
+            'shield.png',
+            // 饰品图标
+            'amulet.png',
+            'ring.png',
+            'cloak.png',
+            'belt.png',
+            'headwear.png',
+            'gloves.png',
+            'boots.png',
+            // 消耗品图标
+            'potion.png',
+            'poison.png',
+            'food.png',
+            'drink.png',
+            'scroll.png',
+            'bomb.png',
+            // 材料和工具图标
+            'material.png',
+            'lockpick.png',
+            'trapkit.png',
+            'gathering.png',
+            'general.png',
+            'keyitem.png',
+            'valuable.png',
+            'trash.png',
+            'readable.png',
+            'recipe.png',
+            // 货币图标
+            'coin-cp.png',
+            'coin-sp.png',
+            'coin-gp.png',
+        ];
+        // 生成完整的URL
+        const allIconUrls = allIconNames.map(name => getIconUrl(name));
+        await preloadImages(allIconUrls);
+    };
+    return {
+        // 状态
+        isLoading,
+        isLoaded,
+        error,
+        cachedImages,
+        // 方法
+        preloadImages,
+        preloadSingleImage,
+        preloadItemIcons,
+        getIconUrl,
+        isImageCached,
+        getImageCacheStatus,
+        refreshImageCache,
+        getCacheStats,
+        clearAllCache,
     };
 }
 
@@ -475,8 +687,6 @@ const AuthorPanelvue_type_script_setup_true_lang_ts_hoisted_4 = { class: "value"
 const AuthorPanel_exports_ = /*#__PURE__*/(0,exportHelper/* default */.A)(AuthorPanelvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-064d17b7"]])
 
 /* harmony default export */ const AuthorPanel = (AuthorPanel_exports_);
-;// external "https://testingcf.jsdelivr.net/npm/@vueuse/core/+esm"
-
 ;// ./src/status-bar/composables/useFontCache.ts
 
 
@@ -629,211 +839,6 @@ function useFontCache() {
     };
 }
 
-;// ./src/status-bar/composables/useImageCache.ts
-
-
-/**
- * 图片缓存管理工具类
- * 结合 useLocalStorage 持久化图片加载状态 + 浏览器缓存机制优化图片加载
- */
-function useImageCache() {
-    // 使用 useLocalStorage 持久化已缓存的图片列表
-    const cachedImages = useLocalStorage('image-cache-cached-images', []);
-    // 当前加载状态
-    const state = (0,external_Vue_namespaceObject.ref)({
-        isLoading: false,
-        error: null,
-    });
-    /**
-     * 计算属性：是否正在加载
-     */
-    const isLoading = (0,external_Vue_namespaceObject.computed)(() => state.value.isLoading);
-    /**
-     * 计算属性：错误信息
-     */
-    const error = (0,external_Vue_namespaceObject.computed)(() => state.value.error);
-    /**
-     * 计算属性：是否所有图片都已缓存
-     */
-    const isLoaded = (0,external_Vue_namespaceObject.computed)(() => cachedImages.value.length > 0);
-    /**
-     * 预加载图片到浏览器缓存
-     * @param imageUrls 图片URL数组
-     */
-    const preloadImages = async (imageUrls) => {
-        try {
-            state.value.isLoading = true;
-            state.value.error = null;
-            // 过滤出未缓存的图片
-            const uncachedUrls = imageUrls.filter(url => !cachedImages.value.includes(url));
-            if (uncachedUrls.length === 0) {
-                state.value.isLoading = false;
-                return;
-            }
-            // 使用 Promise.all 并行加载图片
-            const loadPromises = uncachedUrls.map(url => preloadSingleImage(url));
-            await Promise.all(loadPromises);
-            // 添加到已缓存图片列表（持久化存储）
-            cachedImages.value.push(...uncachedUrls);
-        }
-        catch (err) {
-            state.value.error = err instanceof Error ? err.message : 'Unknown image loading error';
-        }
-        finally {
-            state.value.isLoading = false;
-        }
-    };
-    /**
-     * 预加载单张图片
-     * @param imageUrl 图片URL
-     */
-    const preloadSingleImage = (imageUrl) => {
-        return new Promise((resolve, reject) => {
-            // 检查是否已经存在相同的图片元素
-            const existingImg = document.querySelector(`img[data-cache-url="${imageUrl}"]`);
-            if (existingImg) {
-                resolve();
-                return;
-            }
-            const img = new Image();
-            img.src = imageUrl;
-            img.setAttribute('data-cache-url', imageUrl);
-            img.style.display = 'none'; // 隐藏图片，不影响页面布局
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error(`Failed to load image: ${imageUrl}`));
-            // 将图片添加到DOM中以确保缓存生效
-            document.body.appendChild(img);
-        });
-    };
-    /**
-     * 检查图片是否已缓存
-     * @param imageUrl 图片URL
-     */
-    const isImageCached = (imageUrl) => {
-        return cachedImages.value.includes(imageUrl);
-    };
-    /**
-     * 获取图片缓存状态
-     * @param imageUrl 图片URL
-     */
-    const getImageCacheStatus = (imageUrl) => {
-        return {
-            isLoading: state.value.isLoading,
-            isCached: isImageCached(imageUrl),
-            error: state.value.error,
-        };
-    };
-    /**
-     * 强制刷新图片缓存
-     */
-    const refreshImageCache = () => {
-        // 清除已缓存的图片记录
-        cachedImages.value = [];
-        state.value.error = null;
-        // 移除缓存的图片元素
-        const cachedImgElements = document.querySelectorAll('img[data-cache-url]');
-        cachedImgElements.forEach(img => img.remove());
-    };
-    /**
-     * 获取缓存统计信息
-     */
-    const getCacheStats = () => {
-        return {
-            cachedImages: cachedImages.value.length,
-            imageList: [...cachedImages.value],
-            lastError: state.value.error,
-            storageKey: 'image-cache-cached-images',
-        };
-    };
-    /**
-     * 清除所有缓存数据
-     */
-    const clearAllCache = () => {
-        refreshImageCache();
-        // 清除 localStorage 中的缓存记录
-        cachedImages.value = [];
-    };
-    /**
-     * 预加载物品图标
-     * 从 useItemIcon.ts 中提取所有图标URL并预加载
-     */
-    const preloadItemIcons = async () => {
-        // 分类图标URL
-        const categoryIconUrls = [
-            'https://st.cdn.syrizelink.top/icon/sword.png',
-            'https://st.cdn.syrizelink.top/icon/axe.png',
-            'https://st.cdn.syrizelink.top/icon/mace.png',
-            'https://st.cdn.syrizelink.top/icon/dagger.png',
-            'https://st.cdn.syrizelink.top/icon/polearm.png',
-            'https://st.cdn.syrizelink.top/icon/bow.png',
-            'https://st.cdn.syrizelink.top/icon/crossbow.png',
-            'https://st.cdn.syrizelink.top/icon/staff.png',
-            'https://st.cdn.syrizelink.top/icon/wand.png',
-            'https://st.cdn.syrizelink.top/icon/exotic.png',
-            'https://st.cdn.syrizelink.top/icon/heavy.png',
-            'https://st.cdn.syrizelink.top/icon/medium.png',
-            'https://st.cdn.syrizelink.top/icon/light.png',
-            'https://st.cdn.syrizelink.top/icon/cloth.png',
-            'https://st.cdn.syrizelink.top/icon/shield.png',
-            'https://st.cdn.syrizelink.top/icon/amulet.png',
-            'https://st.cdn.syrizelink.top/icon/ring.png',
-            'https://st.cdn.syrizelink.top/icon/cloak.png',
-            'https://st.cdn.syrizelink.top/icon/belt.png',
-            'https://st.cdn.syrizelink.top/icon/headwear.png',
-            'https://st.cdn.syrizelink.top/icon/gloves.png',
-            'https://st.cdn.syrizelink.top/icon/boots.png',
-            'https://st.cdn.syrizelink.top/icon/potion.png',
-            'https://st.cdn.syrizelink.top/icon/poison.png',
-            'https://st.cdn.syrizelink.top/icon/food.png',
-            'https://st.cdn.syrizelink.top/icon/drink.png',
-            'https://st.cdn.syrizelink.top/icon/scroll.png',
-            'https://st.cdn.syrizelink.top/icon/bomb.png',
-            'https://st.cdn.syrizelink.top/icon/material.png',
-            'https://st.cdn.syrizelink.top/icon/lockpick.png',
-            'https://st.cdn.syrizelink.top/icon/trapkit.png',
-            'https://st.cdn.syrizelink.top/icon/gathering.png',
-            'https://st.cdn.syrizelink.top/icon/general.png',
-            'https://st.cdn.syrizelink.top/icon/keyitem.png',
-            'https://st.cdn.syrizelink.top/icon/valuable.png',
-            'https://st.cdn.syrizelink.top/icon/trash.png',
-            'https://st.cdn.syrizelink.top/icon/readable.png',
-            'https://st.cdn.syrizelink.top/icon/recipe.png',
-        ];
-        // 名称图标URL
-        const nameIconUrls = [
-            'https://st.cdn.syrizelink.top/icon/sword.png',
-            'https://st.cdn.syrizelink.top/icon/shield.png',
-            'https://st.cdn.syrizelink.top/icon/heavy.png',
-            'https://st.cdn.syrizelink.top/icon/headwear.png',
-            'https://st.cdn.syrizelink.top/icon/ring.png',
-            'https://st.cdn.syrizelink.top/icon/amulet.png',
-            'https://st.cdn.syrizelink.top/icon/potion.png',
-            'https://st.cdn.syrizelink.top/icon/scroll.png',
-            'https://st.cdn.syrizelink.top/icon/valuable.png',
-            'https://st.cdn.syrizelink.top/icon/readable.png',
-        ];
-        // 合并所有图标URL并去重
-        const allIconUrls = [...new Set([...categoryIconUrls, ...nameIconUrls])];
-        await preloadImages(allIconUrls);
-    };
-    return {
-        // 状态
-        isLoading,
-        isLoaded,
-        error,
-        cachedImages,
-        // 方法
-        preloadImages,
-        preloadSingleImage,
-        preloadItemIcons,
-        isImageCached,
-        getImageCacheStatus,
-        refreshImageCache,
-        getCacheStats,
-        clearAllCache,
-    };
-}
-
 ;// ./node_modules/.pnpm/ts-loader@9.5.4_typescript@6.0.0-dev.20250807_webpack@5.101.3/node_modules/ts-loader/index.js??clonedRuleSet-46!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.21_typescript@6.0.0-dev.20250807__webpack@5.101.3/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[4].use[0]!./src/status-bar/components/SettingsPanel.vue?vue&type=script&setup=true&lang=ts
 
 
@@ -842,24 +847,14 @@ const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_2 = { class: "sett
 const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_3 = { class: "cache-info" };
 const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_4 = { class: "cache-item" };
 const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_5 = { class: "value" };
-const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_6 = {
-    key: 0,
-    class: "cache-item"
-};
-const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_7 = { class: "value" };
-const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_8 = { class: "action-buttons" };
-const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_9 = ["disabled"];
-const _hoisted_10 = { class: "settings-section" };
-const _hoisted_11 = { class: "cache-info" };
-const _hoisted_12 = { class: "cache-item" };
-const _hoisted_13 = { class: "value" };
-const _hoisted_14 = {
-    key: 0,
-    class: "cache-item"
-};
-const _hoisted_15 = { class: "value" };
-const _hoisted_16 = { class: "action-buttons" };
-const _hoisted_17 = ["disabled"];
+const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_6 = { class: "action-buttons" };
+const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_7 = ["disabled"];
+const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_8 = { class: "settings-section" };
+const SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_9 = { class: "cache-info" };
+const _hoisted_10 = { class: "cache-item" };
+const _hoisted_11 = { class: "value" };
+const _hoisted_12 = { class: "action-buttons" };
+const _hoisted_13 = ["disabled"];
 
 
 
@@ -958,60 +953,46 @@ const _hoisted_17 = ["disabled"];
                     ]),
                     (0,external_Vue_namespaceObject.createElementVNode)("div", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_1, [
                         (0,external_Vue_namespaceObject.createElementVNode)("div", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_2, [
-                            _cache[6] || (_cache[6] = (0,external_Vue_namespaceObject.createElementVNode)("h4", null, "缓存管理", -1 /* CACHED */)),
+                            _cache[5] || (_cache[5] = (0,external_Vue_namespaceObject.createElementVNode)("h4", null, "缓存管理", -1 /* CACHED */)),
                             (0,external_Vue_namespaceObject.createElementVNode)("div", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_3, [
                                 (0,external_Vue_namespaceObject.createElementVNode)("div", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_4, [
                                     _cache[3] || (_cache[3] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "已缓存字体数量:", -1 /* CACHED */)),
                                     (0,external_Vue_namespaceObject.createElementVNode)("span", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_5, (0,external_Vue_namespaceObject.toDisplayString)(cacheStats.value.cachedFonts), 1 /* TEXT */)
-                                ]),
-                                (cacheStats.value.cachedFonts > 0)
-                                    ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_6, [
-                                        _cache[4] || (_cache[4] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "缓存的字体:", -1 /* CACHED */)),
-                                        (0,external_Vue_namespaceObject.createElementVNode)("span", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_7, (0,external_Vue_namespaceObject.toDisplayString)(cacheStats.value.fontList.join(', ')), 1 /* TEXT */)
-                                    ]))
-                                    : (0,external_Vue_namespaceObject.createCommentVNode)("v-if", true)
+                                ])
                             ]),
-                            (0,external_Vue_namespaceObject.createElementVNode)("div", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_8, [
+                            (0,external_Vue_namespaceObject.createElementVNode)("div", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_6, [
                                 (0,external_Vue_namespaceObject.createElementVNode)("button", {
                                     class: "action-button primary",
                                     onClick: clearFontCache,
                                     disabled: isClearing.value
                                 }, [
-                                    _cache[5] || (_cache[5] = (0,external_Vue_namespaceObject.createElementVNode)("i", { class: "fas fa-trash-alt" }, null, -1 /* CACHED */)),
+                                    _cache[4] || (_cache[4] = (0,external_Vue_namespaceObject.createElementVNode)("i", { class: "fas fa-trash-alt" }, null, -1 /* CACHED */)),
                                     (0,external_Vue_namespaceObject.createTextVNode)(" " + (0,external_Vue_namespaceObject.toDisplayString)(isClearing.value ? '清除中...' : '清除字体缓存'), 1 /* TEXT */)
-                                ], 8 /* PROPS */, SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_9)
+                                ], 8 /* PROPS */, SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_7)
                             ]),
-                            _cache[7] || (_cache[7] = (0,external_Vue_namespaceObject.createElementVNode)("div", { class: "cache-description" }, [
+                            _cache[6] || (_cache[6] = (0,external_Vue_namespaceObject.createElementVNode)("div", { class: "cache-description" }, [
                                 (0,external_Vue_namespaceObject.createElementVNode)("p", null, "清除字体缓存将移除已加载的字体记录和浏览器中的字体链接。清除后，字体将重新从网络加载。")
                             ], -1 /* CACHED */))
                         ]),
-                        (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_10, [
-                            _cache[11] || (_cache[11] = (0,external_Vue_namespaceObject.createElementVNode)("h4", null, "图片缓存管理", -1 /* CACHED */)),
-                            (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_11, [
-                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_12, [
-                                    _cache[8] || (_cache[8] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "已缓存图片数量:", -1 /* CACHED */)),
-                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_13, (0,external_Vue_namespaceObject.toDisplayString)(imageCacheStats.value.cachedImages), 1 /* TEXT */)
-                                ]),
-                                (imageCacheStats.value.cachedImages > 0)
-                                    ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", _hoisted_14, [
-                                        _cache[9] || (_cache[9] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "缓存的图片:", -1 /* CACHED */)),
-                                        (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_15, (0,external_Vue_namespaceObject.toDisplayString)(imageCacheStats.value.imageList.length > 10
-                                            ? imageCacheStats.value.imageList.slice(0, 10).join(', ') + '...'
-                                            : imageCacheStats.value.imageList.join(', ')), 1 /* TEXT */)
-                                    ]))
-                                    : (0,external_Vue_namespaceObject.createCommentVNode)("v-if", true)
+                        (0,external_Vue_namespaceObject.createElementVNode)("div", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_8, [
+                            _cache[9] || (_cache[9] = (0,external_Vue_namespaceObject.createElementVNode)("h4", null, "图片缓存管理", -1 /* CACHED */)),
+                            (0,external_Vue_namespaceObject.createElementVNode)("div", SettingsPanelvue_type_script_setup_true_lang_ts_hoisted_9, [
+                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_10, [
+                                    _cache[7] || (_cache[7] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "已缓存图片数量:", -1 /* CACHED */)),
+                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_11, (0,external_Vue_namespaceObject.toDisplayString)(imageCacheStats.value.cachedImages), 1 /* TEXT */)
+                                ])
                             ]),
-                            (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_16, [
+                            (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_12, [
                                 (0,external_Vue_namespaceObject.createElementVNode)("button", {
                                     class: "action-button primary",
                                     onClick: clearImageCache,
                                     disabled: isClearingImages.value
                                 }, [
-                                    _cache[10] || (_cache[10] = (0,external_Vue_namespaceObject.createElementVNode)("i", { class: "fas fa-trash-alt" }, null, -1 /* CACHED */)),
+                                    _cache[8] || (_cache[8] = (0,external_Vue_namespaceObject.createElementVNode)("i", { class: "fas fa-trash-alt" }, null, -1 /* CACHED */)),
                                     (0,external_Vue_namespaceObject.createTextVNode)(" " + (0,external_Vue_namespaceObject.toDisplayString)(isClearingImages.value ? '清除中...' : '清除图片缓存'), 1 /* TEXT */)
-                                ], 8 /* PROPS */, _hoisted_17)
+                                ], 8 /* PROPS */, _hoisted_13)
                             ]),
-                            _cache[12] || (_cache[12] = (0,external_Vue_namespaceObject.createElementVNode)("div", { class: "cache-description" }, [
+                            _cache[10] || (_cache[10] = (0,external_Vue_namespaceObject.createElementVNode)("div", { class: "cache-description" }, [
                                 (0,external_Vue_namespaceObject.createElementVNode)("p", null, "清除图片缓存将移除已加载的物品图标记录和浏览器中的图片缓存。清除后，图片将重新从网络加载。")
                             ], -1 /* CACHED */))
                         ])
@@ -1031,7 +1012,7 @@ const _hoisted_17 = ["disabled"];
 ;
 
 
-const SettingsPanel_exports_ = /*#__PURE__*/(0,exportHelper/* default */.A)(SettingsPanelvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-1ec6beba"]])
+const SettingsPanel_exports_ = /*#__PURE__*/(0,exportHelper/* default */.A)(SettingsPanelvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-5c9a921e"]])
 
 /* harmony default export */ const SettingsPanel = (SettingsPanel_exports_);
 ;// ./node_modules/.pnpm/ts-loader@9.5.4_typescript@6.0.0-dev.20250807_webpack@5.101.3/node_modules/ts-loader/index.js??clonedRuleSet-46!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.21_typescript@6.0.0-dev.20250807__webpack@5.101.3/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[4].use[0]!./src/status-bar/components/BottomBar.vue?vue&type=script&setup=true&lang=ts
@@ -1112,17 +1093,17 @@ const StatusPanelvue_type_script_setup_true_lang_ts_hoisted_10 = { class: "value
 const StatusPanelvue_type_script_setup_true_lang_ts_hoisted_11 = { class: "info-item" };
 const StatusPanelvue_type_script_setup_true_lang_ts_hoisted_12 = { class: "value" };
 const StatusPanelvue_type_script_setup_true_lang_ts_hoisted_13 = { class: "info-column" };
-const StatusPanelvue_type_script_setup_true_lang_ts_hoisted_14 = { class: "info-item" };
-const StatusPanelvue_type_script_setup_true_lang_ts_hoisted_15 = { class: "value" };
-const StatusPanelvue_type_script_setup_true_lang_ts_hoisted_16 = { class: "info-item" };
-const StatusPanelvue_type_script_setup_true_lang_ts_hoisted_17 = { class: "value" };
+const _hoisted_14 = { class: "info-item" };
+const _hoisted_15 = { class: "value" };
+const _hoisted_16 = { class: "info-item" };
+const _hoisted_17 = { class: "value" };
 const _hoisted_18 = { class: "info-item" };
 const _hoisted_19 = { class: "value" };
 const _hoisted_20 = { class: "info-item" };
-const _hoisted_21 = { class: "value" };
-const _hoisted_22 = { class: "attributes-grid" };
-const _hoisted_23 = { class: "attribute-item" };
-const _hoisted_24 = { class: "value" };
+const _hoisted_21 = { class: "currency-display" };
+const _hoisted_22 = ["src", "alt"];
+const _hoisted_23 = { class: "coin-value" };
+const _hoisted_24 = { class: "attributes-grid" };
 const _hoisted_25 = { class: "attribute-item" };
 const _hoisted_26 = { class: "value" };
 const _hoisted_27 = { class: "attribute-item" };
@@ -1133,26 +1114,29 @@ const _hoisted_31 = { class: "attribute-item" };
 const _hoisted_32 = { class: "value" };
 const _hoisted_33 = { class: "attribute-item" };
 const _hoisted_34 = { class: "value" };
-const _hoisted_35 = { class: "status-values" };
-const _hoisted_36 = { class: "status-item" };
-const _hoisted_37 = { class: "status-item" };
+const _hoisted_35 = { class: "attribute-item" };
+const _hoisted_36 = { class: "value" };
+const _hoisted_37 = { class: "status-values" };
 const _hoisted_38 = { class: "status-item" };
 const _hoisted_39 = { class: "status-item" };
-const _hoisted_40 = { class: "body-status" };
-const _hoisted_41 = { class: "temp-effects" };
-const _hoisted_42 = { class: "effect-header" };
-const _hoisted_43 = {
+const _hoisted_40 = { class: "status-item" };
+const _hoisted_41 = { class: "status-item" };
+const _hoisted_42 = { class: "body-status" };
+const _hoisted_43 = { class: "temp-effects" };
+const _hoisted_44 = { class: "effect-header" };
+const _hoisted_45 = {
     key: 0,
     class: "effect-duration"
 };
-const _hoisted_44 = {
+const _hoisted_46 = {
     key: 0,
     class: "effect-description"
 };
-const _hoisted_45 = {
+const _hoisted_47 = {
     key: 0,
     class: "no-effects"
 };
+
 
 
 
@@ -1164,24 +1148,25 @@ const _hoisted_45 = {
     __name: 'StatusPanel',
     setup(__props) {
         const { stat } = useMvuStatData();
+        const { getIconUrl } = useImageCache();
         const worldData = (0,external_Vue_namespaceObject.computed)(() => ({
             currentTime: stat.value.currentTime,
             currentLocation: stat.value.currentLocation,
         }));
         const formatCurrency = (copper) => {
             if (copper === 0)
-                return '0 铜币';
+                return [{ icon: getIconUrl('coin-cp.png'), value: 0 }];
             const gold = Math.floor(copper / 10000);
             const silver = Math.floor((copper % 10000) / 100);
             const remainingCopper = copper % 100;
             const parts = [];
             if (gold > 0)
-                parts.push(`${gold}金币`);
+                parts.push({ icon: getIconUrl('coin-gp.png'), value: gold });
             if (silver > 0)
-                parts.push(`${silver}银币`);
+                parts.push({ icon: getIconUrl('coin-sp.png'), value: silver });
             if (remainingCopper > 0)
-                parts.push(`${remainingCopper}铜币`);
-            return parts.join(' ');
+                parts.push({ icon: getIconUrl('coin-cp.png'), value: remainingCopper });
+            return parts;
         };
         const getEffectVariant = (name, description) => {
             const negativeKeywords = ['中毒', '流血', '衰弱', '虚弱', '诅咒'];
@@ -1215,13 +1200,13 @@ const _hoisted_45 = {
                                 ]),
                                 _cache[8] || (_cache[8] = (0,external_Vue_namespaceObject.createElementVNode)("div", { class: "info-divider" }, null, -1 /* CACHED */)),
                                 (0,external_Vue_namespaceObject.createElementVNode)("div", StatusPanelvue_type_script_setup_true_lang_ts_hoisted_13, [
-                                    (0,external_Vue_namespaceObject.createElementVNode)("div", StatusPanelvue_type_script_setup_true_lang_ts_hoisted_14, [
+                                    (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_14, [
                                         _cache[4] || (_cache[4] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "奥术师等级", -1 /* CACHED */)),
-                                        (0,external_Vue_namespaceObject.createElementVNode)("span", StatusPanelvue_type_script_setup_true_lang_ts_hoisted_15, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).arcanistRank || '未知'), 1 /* TEXT */)
+                                        (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_15, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).arcanistRank || '未知'), 1 /* TEXT */)
                                     ]),
-                                    (0,external_Vue_namespaceObject.createElementVNode)("div", StatusPanelvue_type_script_setup_true_lang_ts_hoisted_16, [
+                                    (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_16, [
                                         _cache[5] || (_cache[5] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "声望", -1 /* CACHED */)),
-                                        (0,external_Vue_namespaceObject.createElementVNode)("span", StatusPanelvue_type_script_setup_true_lang_ts_hoisted_17, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).reputation || 0), 1 /* TEXT */)
+                                        (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_17, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).reputation || 0), 1 /* TEXT */)
                                     ]),
                                     (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_18, [
                                         _cache[6] || (_cache[6] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "恶名", -1 /* CACHED */)),
@@ -1229,7 +1214,21 @@ const _hoisted_45 = {
                                     ]),
                                     (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_20, [
                                         _cache[7] || (_cache[7] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "财富", -1 /* CACHED */)),
-                                        (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_21, (0,external_Vue_namespaceObject.toDisplayString)(formatCurrency((0,external_Vue_namespaceObject.unref)(stat).currency || 0)), 1 /* TEXT */)
+                                        (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_21, [
+                                            ((0,external_Vue_namespaceObject.openBlock)(true), (0,external_Vue_namespaceObject.createElementBlock)(external_Vue_namespaceObject.Fragment, null, (0,external_Vue_namespaceObject.renderList)(formatCurrency((0,external_Vue_namespaceObject.unref)(stat).currency || 0), (coin) => {
+                                                return ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("span", {
+                                                    key: coin.icon,
+                                                    class: "coin-item"
+                                                }, [
+                                                    (0,external_Vue_namespaceObject.createElementVNode)("img", {
+                                                        src: coin.icon,
+                                                        alt: coin.icon,
+                                                        class: "coin-icon"
+                                                    }, null, 8 /* PROPS */, _hoisted_22),
+                                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_23, (0,external_Vue_namespaceObject.toDisplayString)(coin.value), 1 /* TEXT */)
+                                                ]));
+                                            }), 128 /* KEYED_FRAGMENT */))
+                                        ])
                                     ])
                                 ])
                             ])
@@ -1238,30 +1237,30 @@ const _hoisted_45 = {
                     }),
                     (0,external_Vue_namespaceObject.createVNode)(SectionCard, { title: "核心属性" }, {
                         default: (0,external_Vue_namespaceObject.withCtx)(() => [
-                            (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_22, [
-                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_23, [
-                                    _cache[9] || (_cache[9] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "力", -1 /* CACHED */)),
-                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_24, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).strength || 0), 1 /* TEXT */)
-                                ]),
+                            (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_24, [
                                 (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_25, [
-                                    _cache[10] || (_cache[10] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "敏", -1 /* CACHED */)),
-                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_26, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).dexterity || 0), 1 /* TEXT */)
+                                    _cache[9] || (_cache[9] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "力", -1 /* CACHED */)),
+                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_26, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).strength || 0), 1 /* TEXT */)
                                 ]),
                                 (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_27, [
-                                    _cache[11] || (_cache[11] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "体", -1 /* CACHED */)),
-                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_28, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).constitution || 0), 1 /* TEXT */)
+                                    _cache[10] || (_cache[10] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "敏", -1 /* CACHED */)),
+                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_28, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).dexterity || 0), 1 /* TEXT */)
                                 ]),
                                 (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_29, [
-                                    _cache[12] || (_cache[12] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "智", -1 /* CACHED */)),
-                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_30, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).intelligence || 0), 1 /* TEXT */)
+                                    _cache[11] || (_cache[11] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "体", -1 /* CACHED */)),
+                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_30, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).constitution || 0), 1 /* TEXT */)
                                 ]),
                                 (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_31, [
-                                    _cache[13] || (_cache[13] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "感", -1 /* CACHED */)),
-                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_32, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).wisdom || 0), 1 /* TEXT */)
+                                    _cache[12] || (_cache[12] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "智", -1 /* CACHED */)),
+                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_32, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).intelligence || 0), 1 /* TEXT */)
                                 ]),
                                 (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_33, [
+                                    _cache[13] || (_cache[13] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "感", -1 /* CACHED */)),
+                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_34, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).wisdom || 0), 1 /* TEXT */)
+                                ]),
+                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_35, [
                                     _cache[14] || (_cache[14] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "emoji" }, "魅", -1 /* CACHED */)),
-                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_34, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).charisma || 0), 1 /* TEXT */)
+                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_36, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).charisma || 0), 1 /* TEXT */)
                                 ])
                             ])
                         ]),
@@ -1269,8 +1268,8 @@ const _hoisted_45 = {
                     }),
                     (0,external_Vue_namespaceObject.createVNode)(SectionCard, { title: "状态值" }, {
                         default: (0,external_Vue_namespaceObject.withCtx)(() => [
-                            (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_35, [
-                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_36, [
+                            (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_37, [
+                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_38, [
                                     _cache[15] || (_cache[15] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "精力", -1 /* CACHED */)),
                                     (0,external_Vue_namespaceObject.createVNode)(ProgressBar, {
                                         value: (0,external_Vue_namespaceObject.unref)(stat).energy || 100,
@@ -1278,7 +1277,7 @@ const _hoisted_45 = {
                                         color: "yellow"
                                     }, null, 8 /* PROPS */, ["value"])
                                 ]),
-                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_37, [
+                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_39, [
                                     _cache[16] || (_cache[16] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "饱腹", -1 /* CACHED */)),
                                     (0,external_Vue_namespaceObject.createVNode)(ProgressBar, {
                                         value: (0,external_Vue_namespaceObject.unref)(stat).satiety || 100,
@@ -1286,7 +1285,7 @@ const _hoisted_45 = {
                                         color: "orange"
                                     }, null, 8 /* PROPS */, ["value"])
                                 ]),
-                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_38, [
+                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_40, [
                                     _cache[17] || (_cache[17] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "洁净", -1 /* CACHED */)),
                                     (0,external_Vue_namespaceObject.createVNode)(ProgressBar, {
                                         value: (0,external_Vue_namespaceObject.unref)(stat).cleanliness || 100,
@@ -1294,9 +1293,9 @@ const _hoisted_45 = {
                                         color: "blue"
                                     }, null, 8 /* PROPS */, ["value"])
                                 ]),
-                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_39, [
+                                (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_41, [
                                     _cache[18] || (_cache[18] = (0,external_Vue_namespaceObject.createElementVNode)("span", { class: "label" }, "身体状态", -1 /* CACHED */)),
-                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_40, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).bodyStatus || '健康'), 1 /* TEXT */)
+                                    (0,external_Vue_namespaceObject.createElementVNode)("span", _hoisted_42, (0,external_Vue_namespaceObject.toDisplayString)((0,external_Vue_namespaceObject.unref)(stat).bodyStatus || '健康'), 1 /* TEXT */)
                                 ])
                             ])
                         ]),
@@ -1304,28 +1303,28 @@ const _hoisted_45 = {
                     }),
                     (0,external_Vue_namespaceObject.createVNode)(SectionCard, { title: "临时效果" }, {
                         default: (0,external_Vue_namespaceObject.withCtx)(() => [
-                            (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_41, [
+                            (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_43, [
                                 ((0,external_Vue_namespaceObject.openBlock)(true), (0,external_Vue_namespaceObject.createElementBlock)(external_Vue_namespaceObject.Fragment, null, (0,external_Vue_namespaceObject.renderList)((0,external_Vue_namespaceObject.unref)(stat).tempStatus || [], (effect) => {
                                     return ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", {
                                         key: effect.id,
                                         class: "effect-item"
                                     }, [
-                                        (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_42, [
+                                        (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_44, [
                                             (0,external_Vue_namespaceObject.createVNode)(Badge, {
                                                 text: effect.name || '未知',
                                                 variant: getEffectVariant(effect.name || '', effect.description || '')
                                             }, null, 8 /* PROPS */, ["text", "variant"]),
                                             (effect.duration)
-                                                ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("span", _hoisted_43, (0,external_Vue_namespaceObject.toDisplayString)(effect.duration), 1 /* TEXT */))
+                                                ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("span", _hoisted_45, (0,external_Vue_namespaceObject.toDisplayString)(effect.duration), 1 /* TEXT */))
                                                 : (0,external_Vue_namespaceObject.createCommentVNode)("v-if", true)
                                         ]),
                                         (effect.description)
-                                            ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", _hoisted_44, (0,external_Vue_namespaceObject.toDisplayString)(effect.description), 1 /* TEXT */))
+                                            ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", _hoisted_46, (0,external_Vue_namespaceObject.toDisplayString)(effect.description), 1 /* TEXT */))
                                             : (0,external_Vue_namespaceObject.createCommentVNode)("v-if", true)
                                     ]));
                                 }), 128 /* KEYED_FRAGMENT */)),
                                 (!(0,external_Vue_namespaceObject.unref)(stat).tempStatus?.length)
-                                    ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", _hoisted_45, "无临时效果"))
+                                    ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", _hoisted_47, "无临时效果"))
                                     : (0,external_Vue_namespaceObject.createCommentVNode)("v-if", true)
                             ])
                         ]),
@@ -1348,82 +1347,82 @@ const _hoisted_45 = {
 ;
 
 
-const StatusPanel_exports_ = /*#__PURE__*/(0,exportHelper/* default */.A)(StatusPanelvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-330481ea"]])
+const StatusPanel_exports_ = /*#__PURE__*/(0,exportHelper/* default */.A)(StatusPanelvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-24a50078"]])
 
 /* harmony default export */ const StatusPanel = (StatusPanel_exports_);
 ;// ./src/status-bar/composables/useItemIcon.ts
 
-// 默认的分类图标映射（图片URL）
+// 默认的分类图标映射（文件名）
 const defaultCategoryIcons = {
     Weapon: {
-        Sword: 'https://st.cdn.syrizelink.top/icon/sword.png',
-        Axe: 'https://st.cdn.syrizelink.top/icon/axe.png',
-        Mace: 'https://st.cdn.syrizelink.top/icon/mace.png',
-        Dagger: 'https://st.cdn.syrizelink.top/icon/dagger.png',
-        Polearm: 'https://st.cdn.syrizelink.top/icon/polearm.png',
-        Bow: 'https://st.cdn.syrizelink.top/icon/bow.png',
-        Crossbow: 'https://st.cdn.syrizelink.top/icon/crossbow.png',
-        Staff: 'https://st.cdn.syrizelink.top/icon/staff.png',
-        Wand: 'https://st.cdn.syrizelink.top/icon/wand.png',
-        Exotic: 'https://st.cdn.syrizelink.top/icon/exotic.png',
+        Sword: 'sword.png',
+        Axe: 'axe.png',
+        Mace: 'mace.png',
+        Dagger: 'dagger.png',
+        Polearm: 'polearm.png',
+        Bow: 'bow.png',
+        Crossbow: 'crossbow.png',
+        Staff: 'staff.png',
+        Wand: 'wand.png',
+        Exotic: 'exotic.png',
     },
     Armor: {
-        Heavy: 'https://st.cdn.syrizelink.top/icon/heavy.png',
-        Medium: 'https://st.cdn.syrizelink.top/icon/medium.png',
-        Light: 'https://st.cdn.syrizelink.top/icon/light.png',
-        Cloth: 'https://st.cdn.syrizelink.top/icon/cloth.png',
-        Shield: 'https://st.cdn.syrizelink.top/icon/shield.png',
+        Heavy: 'heavy.png',
+        Medium: 'medium.png',
+        Light: 'light.png',
+        Cloth: 'cloth.png',
+        Shield: 'shield.png',
     },
     Accessory: {
-        Amulet: 'https://st.cdn.syrizelink.top/icon/amulet.png',
-        Ring: 'https://st.cdn.syrizelink.top/icon/ring.png',
-        Cloak: 'https://st.cdn.syrizelink.top/icon/cloak.png',
-        Belt: 'https://st.cdn.syrizelink.top/icon/belt.png',
-        Headwear: 'https://st.cdn.syrizelink.top/icon/headwear.png',
-        Gloves: 'https://st.cdn.syrizelink.top/icon/gloves.png',
-        Boots: 'https://st.cdn.syrizelink.top/icon/boots.png',
+        Amulet: 'amulet.png',
+        Ring: 'ring.png',
+        Cloak: 'cloak.png',
+        Belt: 'belt.png',
+        Headwear: 'headwear.png',
+        Gloves: 'gloves.png',
+        Boots: 'boots.png',
     },
     Consumable: {
-        Potion: 'https://st.cdn.syrizelink.top/icon/potion.png',
-        Poison: 'https://st.cdn.syrizelink.top/icon/poison.png',
-        Food: 'https://st.cdn.syrizelink.top/icon/food.png',
-        Drink: 'https://st.cdn.syrizelink.top/icon/drink.png',
-        Scroll: 'https://st.cdn.syrizelink.top/icon/scroll.png',
-        Bomb: 'https://st.cdn.syrizelink.top/icon/bomb.png',
-        Material: 'https://st.cdn.syrizelink.top/icon/material.png',
+        Potion: 'potion.png',
+        Poison: 'poison.png',
+        Food: 'food.png',
+        Drink: 'drink.png',
+        Scroll: 'scroll.png',
+        Bomb: 'bomb.png',
+        Material: 'material.png',
     },
     Tool: {
-        Lockpick: 'https://st.cdn.syrizelink.top/icon/lockpick.png',
-        TrapKit: 'https://st.cdn.syrizelink.top/icon/trapkit.png',
-        Gathering: 'https://st.cdn.syrizelink.top/icon/gathering.png',
-        General: 'https://st.cdn.syrizelink.top/icon/general.png',
+        Lockpick: 'lockpick.png',
+        TrapKit: 'trapkit.png',
+        Gathering: 'gathering.png',
+        General: 'general.png',
     },
     Quest: {
-        KeyItem: 'https://st.cdn.syrizelink.top/icon/keyitem.png',
+        KeyItem: 'keyitem.png',
     },
     Junk: {
-        Valuable: 'https://st.cdn.syrizelink.top/icon/valuable.png',
-        Trash: 'https://st.cdn.syrizelink.top/icon/trash.png',
+        Valuable: 'valuable.png',
+        Trash: 'trash.png',
     },
     Book: {
-        Readable: 'https://st.cdn.syrizelink.top/icon/readable.png',
-        Recipe: 'https://st.cdn.syrizelink.top/icon/recipe.png',
+        Readable: 'readable.png',
+        Recipe: 'recipe.png',
     },
 };
-// 默认的名称图标映射（图片URL）
+// 默认的名称图标映射（文件名）
 const defaultNameIconMap = {
-    剑: 'https://st.cdn.syrizelink.top/icon/sword.png',
-    盾: 'https://st.cdn.syrizelink.top/icon/shield.png',
-    盔甲: 'https://st.cdn.syrizelink.top/icon/heavy.png',
-    头盔: 'https://st.cdn.syrizelink.top/icon/headwear.png',
-    戒指: 'https://st.cdn.syrizelink.top/icon/ring.png',
-    项链: 'https://st.cdn.syrizelink.top/icon/amulet.png',
-    药水: 'https://st.cdn.syrizelink.top/icon/potion.png',
-    卷轴: 'https://st.cdn.syrizelink.top/icon/scroll.png',
-    宝石: 'https://st.cdn.syrizelink.top/icon/valuable.png',
-    金币: 'https://st.cdn.syrizelink.top/icon/valuable.png',
-    书: 'https://st.cdn.syrizelink.top/icon/readable.png',
-    任务: 'https://st.cdn.syrizelink.top/icon/keyitem.png',
+    剑: 'sword.png',
+    盾: 'shield.png',
+    盔甲: 'heavy.png',
+    头盔: 'headwear.png',
+    戒指: 'ring.png',
+    项链: 'amulet.png',
+    药水: 'potion.png',
+    卷轴: 'scroll.png',
+    宝石: 'valuable.png',
+    金币: 'valuable.png',
+    书: 'readable.png',
+    任务: 'keyitem.png',
 };
 /**
  * 获取物品图标的工具类
@@ -1431,7 +1430,7 @@ const defaultNameIconMap = {
  */
 function useItemIcon() {
     // 初始化图片缓存
-    const { preloadItemIcons, isImageCached } = useImageCache();
+    const { preloadItemIcons, isImageCached, getIconUrl } = useImageCache();
     // 在组件加载时预加载物品图标
     if (typeof window !== 'undefined') {
         // 使用 setTimeout 确保在 DOM 加载完成后执行
@@ -1446,8 +1445,9 @@ function useItemIcon() {
      * @returns 图标URL
      */
     const getIconByCategory = (category, subCategory) => {
-        // 返回对应类别的图标，如果找不到则返回默认图标
-        return defaultCategoryIcons[category]?.[subCategory] || 'https://st.cdn.syrizelink.top/icon/general.png';
+        // 获取文件名，如果找不到则返回默认图标文件名
+        const iconName = defaultCategoryIcons[category]?.[subCategory] || 'general.png';
+        return getIconUrl(iconName);
     };
     /**
      * 获取物品图标
@@ -1455,24 +1455,25 @@ function useItemIcon() {
      * @returns 图标URL
      */
     const getItemIcon = (item) => {
-        let iconUrl = '';
+        let iconName = '';
         // 优先使用 category 和 subCategory 字段
         if (item.category && item.subCategory) {
-            iconUrl = getIconByCategory(item.category, item.subCategory);
+            iconName = defaultCategoryIcons[item.category]?.[item.subCategory] || 'general.png';
         }
         else {
             // 如果没有分类信息，尝试从名称中解析
-            for (const [key, icon] of Object.entries(defaultNameIconMap)) {
+            for (const [key, name] of Object.entries(defaultNameIconMap)) {
                 if (item.name.includes(key)) {
-                    iconUrl = icon;
+                    iconName = name;
                     break;
                 }
             }
             // 如果仍未找到，使用默认图标
-            if (!iconUrl) {
-                iconUrl = 'https://st.cdn.syrizelink.top/icon/general.png';
+            if (!iconName) {
+                iconName = 'general.png';
             }
         }
+        const iconUrl = getIconUrl(iconName);
         // 检查图片是否已缓存，如果未缓存则异步预加载
         if (!isImageCached(iconUrl)) {
             // 异步预加载，不阻塞主线程
@@ -2291,8 +2292,8 @@ const CompanionsPanelvue_type_script_setup_true_lang_ts_hoisted_44 = {
     class: "no-data"
 };
 const CompanionsPanelvue_type_script_setup_true_lang_ts_hoisted_45 = { class: "tooltip-header" };
-const _hoisted_46 = { class: "tooltip-description" };
-const _hoisted_47 = {
+const CompanionsPanelvue_type_script_setup_true_lang_ts_hoisted_46 = { class: "tooltip-description" };
+const CompanionsPanelvue_type_script_setup_true_lang_ts_hoisted_47 = {
     key: 0,
     class: "tooltip-effects"
 };
@@ -2570,9 +2571,9 @@ const _hoisted_50 = {
                                 class: (0,external_Vue_namespaceObject.normalizeClass)(["tooltip-tier", getRarityClass(tooltipItem.value.tier)])
                             }, (0,external_Vue_namespaceObject.toDisplayString)(tooltipItem.value.tier), 3 /* TEXT, CLASS */)
                         ]),
-                        (0,external_Vue_namespaceObject.createElementVNode)("div", _hoisted_46, (0,external_Vue_namespaceObject.toDisplayString)(tooltipItem.value.description), 1 /* TEXT */),
+                        (0,external_Vue_namespaceObject.createElementVNode)("div", CompanionsPanelvue_type_script_setup_true_lang_ts_hoisted_46, (0,external_Vue_namespaceObject.toDisplayString)(tooltipItem.value.description), 1 /* TEXT */),
                         (tooltipItem.value.specialEffects?.length)
-                            ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", _hoisted_47, [
+                            ? ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", CompanionsPanelvue_type_script_setup_true_lang_ts_hoisted_47, [
                                 ((0,external_Vue_namespaceObject.openBlock)(true), (0,external_Vue_namespaceObject.createElementBlock)(external_Vue_namespaceObject.Fragment, null, (0,external_Vue_namespaceObject.renderList)(tooltipItem.value.specialEffects, (effect) => {
                                     return ((0,external_Vue_namespaceObject.openBlock)(), (0,external_Vue_namespaceObject.createElementBlock)("div", {
                                         key: effect.name,
@@ -2610,7 +2611,7 @@ const _hoisted_50 = {
 ;
 
 
-const CompanionsPanel_exports_ = /*#__PURE__*/(0,exportHelper/* default */.A)(CompanionsPanelvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-2d333f2c"]])
+const CompanionsPanel_exports_ = /*#__PURE__*/(0,exportHelper/* default */.A)(CompanionsPanelvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-e272ef34"]])
 
 /* harmony default export */ const CompanionsPanel = (CompanionsPanel_exports_);
 ;// ./node_modules/.pnpm/ts-loader@9.5.4_typescript@6.0.0-dev.20250807_webpack@5.101.3/node_modules/ts-loader/index.js??clonedRuleSet-46!./node_modules/.pnpm/vue-loader@17.4.2_vue@3.5.21_typescript@6.0.0-dev.20250807__webpack@5.101.3/node_modules/vue-loader/dist/index.js??ruleSet[1].rules[4].use[0]!./src/status-bar/app.vue?vue&type=script&setup=true&lang=ts
@@ -2677,7 +2678,7 @@ const appvue_type_script_setup_true_lang_ts_hoisted_3 = { class: "content" };
 ;
 
 
-const app_exports_ = /*#__PURE__*/(0,exportHelper/* default */.A)(appvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-dbcd0e5a"]])
+const app_exports_ = /*#__PURE__*/(0,exportHelper/* default */.A)(appvue_type_script_setup_true_lang_ts, [['__scopeId',"data-v-b157476e"]])
 
 /* harmony default export */ const status_bar_app = (app_exports_);
 ;// external "https://testingcf.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css/+esm"
@@ -2701,7 +2702,7 @@ $(() => {
     const app = (0,external_Vue_namespaceObject.createApp)(status_bar_app);
     app.mount('#app');
 });</script><style>@import url(https://fontsapi.zeoseven.com/170/main/result.css);
-.tab-bar[data-v-031c1920]{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;padding:4px;background:#1a1a1a;border-radius:6px}.tab-button[data-v-031c1920]{flex:1;min-width:80px;padding:8px 12px;border:none;border-radius:4px;background:transparent;color:#888;font-size:20px;font-weight:500;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;justify-content:center;gap:4px}.tab-button[data-v-031c1920]:hover{background:#2a2a2a;color:#ccc}.tab-button.active[data-v-031c1920]{background:#3a3a3a;color:#e0e0e0;font-weight:600}.tab-icon[data-v-031c1920]{font-size:14px}.tab-label[data-v-031c1920]{white-space:nowrap}@media (max-width:480px){.tab-bar[data-v-031c1920]{flex-direction:column}.tab-button[data-v-031c1920]{min-width:auto;justify-content:flex-start}}
+.tab-bar[data-v-7b9313c1]{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;padding:4px;background:#1a1a1a;border-radius:6px}.tab-button[data-v-7b9313c1]{flex:1;min-width:80px;padding:8px 12px;border:none;border-radius:4px;background:transparent;color:#888;font-size:20px;font-weight:500;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;justify-content:center;gap:4px}.tab-button[data-v-7b9313c1]:hover{background:#2a2a2a;color:#ccc}.tab-button.active[data-v-7b9313c1]{background:#3a3a3a;color:#e0e0e0;font-weight:600}.tab-icon[data-v-7b9313c1]{font-size:14px}.tab-label[data-v-7b9313c1]{white-space:nowrap}
 
 .world-status-bar[data-v-07defcda]{display:flex;flex-direction:column;gap:6px;padding:8px;background:#2a2a2a;border-radius:6px;border:1px solid #444}.time-info[data-v-07defcda],.location-info[data-v-07defcda],.weather-info[data-v-07defcda]{display:flex;align-items:center;gap:6px}.emoji[data-v-07defcda]{font-size:14px;flex-shrink:0}.time-text[data-v-07defcda],.location-text[data-v-07defcda],.weather-text[data-v-07defcda]{color:#e0e0e0;font-size:17px;font-weight:500}.environment-info[data-v-07defcda]{margin-top:4px;padding-top:6px;border-top:1px solid #444}.environment-text[data-v-07defcda]{color:#aaa;font-size:16px;font-style:italic;line-height:1.4}@media (max-width:768px){.world-status-bar[data-v-07defcda]{flex-direction:column;gap:4px}.time-info[data-v-07defcda],.location-info[data-v-07defcda],.weather-info[data-v-07defcda]{justify-content:flex-start}}
 
@@ -2713,11 +2714,11 @@ $(() => {
 
 .author-panel-overlay[data-v-064d17b7]{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(4px)}.author-panel[data-v-064d17b7]{background:#2a2a2a;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.3);max-width:400px;width:90%;max-height:60vh;overflow-y:auto;border:1px solid rgba(255,255,255,0.1);margin-bottom:300px}.panel-header[data-v-064d17b7]{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.1)}.panel-header h3[data-v-064d17b7]{margin:0;color:#e0e0e0;font-size:18px;font-weight:600}.close-button[data-v-064d17b7]{background:none;border:none;color:#888;font-size:16px;cursor:pointer;padding:4px;border-radius:4px;transition:all 0.2s ease}.close-button[data-v-064d17b7]:hover{background:rgba(255,255,255,0.1);color:#e0e0e0}.panel-content[data-v-064d17b7]{padding:24px}.author-info[data-v-064d17b7]{display:flex;align-items:center;gap:16px;margin-bottom:24px}.author-avatar[data-v-064d17b7]{font-size:48px;color:#666}.author-details h4[data-v-064d17b7]{margin:0 0 4px 0;color:#e0e0e0;font-size:16px;font-weight:600}.author-role[data-v-064d17b7]{margin:0 0 8px 0;color:#888;font-size:14px}.author-description[data-v-064d17b7]{margin:0;color:#ccc;font-size:14px;line-height:1.5}.version-info[data-v-064d17b7]{background:rgba(255,255,255,0.05);border-radius:8px;padding:16px;margin-bottom:24px}.version-item[data-v-064d17b7]{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.version-item[data-v-064d17b7]:last-child{margin-bottom:0}.version-item .label[data-v-064d17b7]{color:#ccc;font-size:14px}.version-item .value[data-v-064d17b7]{color:#e0e0e0;font-size:14px;font-weight:500}.features-list h5[data-v-064d17b7]{margin:0 0 12px 0;color:#e0e0e0;font-size:16px;font-weight:600}.features-list ul[data-v-064d17b7]{list-style:none;padding:0;margin:0}.features-list li[data-v-064d17b7]{display:flex;align-items:center;gap:8px;color:#ccc;font-size:14px;margin-bottom:6px}.features-list li i[data-v-064d17b7]{color:#52c41a;font-size:12px}.contact-info[data-v-064d17b7]{margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1)}.contact-info h5[data-v-064d17b7]{margin:0 0 8px 0;color:#e0e0e0;font-size:16px;font-weight:600}.contact-info p[data-v-064d17b7]{margin:0;color:#ccc;font-size:14px;line-height:1.5}
 
-.settings-panel-overlay[data-v-1ec6beba]{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(4px)}.settings-panel[data-v-1ec6beba]{background:#2a2a2a;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.3);max-width:400px;width:90%;max-height:60vh;overflow-y:auto;border:1px solid rgba(255,255,255,0.1);margin-bottom:500px}.panel-header[data-v-1ec6beba]{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.1)}.panel-header h3[data-v-1ec6beba]{margin:0;color:#e0e0e0;font-size:18px;font-weight:600}.close-button[data-v-1ec6beba]{background:none;border:none;color:#888;font-size:16px;cursor:pointer;padding:4px;border-radius:4px;transition:all 0.2s ease}.close-button[data-v-1ec6beba]:hover{background:rgba(255,255,255,0.1);color:#e0e0e0}.panel-content[data-v-1ec6beba]{padding:24px}.settings-section[data-v-1ec6beba]{margin-bottom:32px}.settings-section[data-v-1ec6beba]:last-child{margin-bottom:0}.settings-section h4[data-v-1ec6beba]{margin:0 0 16px 0;color:#e0e0e0;font-size:16px;font-weight:600}.cache-info[data-v-1ec6beba]{background:rgba(255,255,255,0.05);border-radius:8px;padding:16px;margin-bottom:16px}.cache-item[data-v-1ec6beba]{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.cache-item[data-v-1ec6beba]:last-child{margin-bottom:0}.cache-item .label[data-v-1ec6beba]{color:#ccc;font-size:14px}.cache-item .value[data-v-1ec6beba]{color:#e0e0e0;font-size:14px;font-weight:500;word-break:break-all}.action-buttons[data-v-1ec6beba]{display:flex;gap:12px;margin-bottom:16px}.action-button[data-v-1ec6beba]{background:#1890ff;border:none;color:white;padding:10px 16px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;gap:8px}.action-button[data-v-1ec6beba]:hover:not(:disabled){background:#40a9ff;transform:translateY(-1px)}.action-button[data-v-1ec6beba]:disabled{background:#666;cursor:not-allowed;transform:none}.action-button.primary[data-v-1ec6beba]{background:#1890ff}.cache-description[data-v-1ec6beba]{color:#ccc;font-size:14px;line-height:1.5}.cache-description p[data-v-1ec6beba]{margin:0}.about-info[data-v-1ec6beba]{color:#ccc;font-size:14px;line-height:1.5}.about-info p[data-v-1ec6beba]{margin:0 0 8px 0}.about-info .version[data-v-1ec6beba]{color:#e0e0e0;font-weight:500}
+.settings-panel-overlay[data-v-5c9a921e]{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(4px)}.settings-panel[data-v-5c9a921e]{background:#2a2a2a;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.3);max-width:400px;width:90%;max-height:60vh;overflow-y:auto;border:1px solid rgba(255,255,255,0.1);margin-bottom:500px}.panel-header[data-v-5c9a921e]{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.1)}.panel-header h3[data-v-5c9a921e]{margin:0;color:#e0e0e0;font-size:18px;font-weight:600}.close-button[data-v-5c9a921e]{background:none;border:none;color:#888;font-size:16px;cursor:pointer;padding:4px;border-radius:4px;transition:all 0.2s ease}.close-button[data-v-5c9a921e]:hover{background:rgba(255,255,255,0.1);color:#e0e0e0}.panel-content[data-v-5c9a921e]{padding:24px}.settings-section[data-v-5c9a921e]{margin-bottom:32px}.settings-section[data-v-5c9a921e]:last-child{margin-bottom:0}.settings-section h4[data-v-5c9a921e]{margin:0 0 16px 0;color:#e0e0e0;font-size:16px;font-weight:600}.cache-info[data-v-5c9a921e]{background:rgba(255,255,255,0.05);border-radius:8px;padding:16px;margin-bottom:16px}.action-buttons[data-v-5c9a921e]{display:flex;gap:12px;margin-bottom:16px}.action-button[data-v-5c9a921e]{background:#1890ff;border:none;color:white;padding:10px 16px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;gap:8px}.action-button[data-v-5c9a921e]:hover:not(:disabled){background:#40a9ff;transform:translateY(-1px)}.action-button[data-v-5c9a921e]:disabled{background:#666;cursor:not-allowed;transform:none}.action-button.primary[data-v-5c9a921e]{background:#1890ff}.cache-description[data-v-5c9a921e]{color:#ccc;font-size:14px;line-height:1.5}.cache-description p[data-v-5c9a921e]{margin:0}.about-info[data-v-5c9a921e]{color:#ccc;font-size:14px;line-height:1.5}.about-info p[data-v-5c9a921e]{margin:0 0 8px 0}.about-info .version[data-v-5c9a921e]{color:#e0e0e0;font-weight:500}
 
 .bottom-bar[data-v-49645e8f]{position:relative;background:rgba(26,26,26,0.95);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,0.1);margin-top:12px}.bottom-bar-content[data-v-49645e8f]{display:flex;justify-content:flex-end;align-items:center;padding:8px 16px;gap:12px}.icon-button[data-v-49645e8f]{background:none;border:none;color:#e0e0e0;font-size:16px;padding:8px;border-radius:6px;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;justify-content:center;min-width:32px;min-height:32px}.icon-button[data-v-49645e8f]:hover{background:rgba(255,255,255,0.1);color:#ffffff;transform:translateY(-1px)}.icon-button[data-v-49645e8f]:active{transform:translateY(0)}
 
-.status-panel[data-v-330481ea]{display:flex;flex-direction:column;gap:12px}.grid-container[data-v-330481ea]{display:grid;grid-template-columns:1fr 1fr;gap:12px}.info-grid[data-v-330481ea]{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:start}.info-column[data-v-330481ea]{display:flex;flex-direction:column;gap:8px}.info-divider[data-v-330481ea]{width:1px;height:100%;background:#555;min-height:120px}.info-item[data-v-330481ea]{display:flex;justify-content:space-between;align-items:center;padding:4px 0}.label[data-v-330481ea]{color:#888;font-size:18px}.value[data-v-330481ea]{color:#e0e0e0;font-size:18px;font-weight:500}.attributes-grid[data-v-330481ea]{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.attribute-item[data-v-330481ea]{display:flex;flex-direction:column;align-items:center;padding:4px;background:#2a2a2a;border-radius:6px;text-align:center}.emoji[data-v-330481ea]{font-size:32px}.attribute-item .value[data-v-330481ea]{font-size:20px;font-weight:600}.status-values[data-v-330481ea]{display:flex;flex-direction:column;gap:8px}.status-item[data-v-330481ea]{display:flex;align-items:center;gap:8px}.status-item .label[data-v-330481ea]{min-width:70px;flex-shrink:0;font-size:18px;color:#888}.body-status[data-v-330481ea]{color:#e0e0e0;font-size:18px}.temp-effects[data-v-330481ea]{display:flex;flex-direction:column;gap:8px}.effect-item[data-v-330481ea]{padding:8px;background:#2a2a2a;border-radius:6px;border:1px solid #444}.effect-header[data-v-330481ea]{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}.effect-duration[data-v-330481ea]{color:#999;font-size:15px;font-weight:400}.effect-description[data-v-330481ea]{color:#ddd;font-size:16px;line-height:1.5}.no-effects[data-v-330481ea]{color:#888;font-size:16px;font-style:italic;padding:12px 0;text-align:center}@media (max-width:768px){.grid-container[data-v-330481ea]{grid-template-columns:1fr}.attributes-grid[data-v-330481ea]{grid-template-columns:repeat(6,1fr)}}
+.status-panel[data-v-24a50078]{display:flex;flex-direction:column;gap:12px}.grid-container[data-v-24a50078]{display:grid;grid-template-columns:1fr 1fr;gap:12px}.info-grid[data-v-24a50078]{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:start}.info-column[data-v-24a50078]{display:flex;flex-direction:column;gap:8px}.info-divider[data-v-24a50078]{width:1px;height:100%;background:#555;min-height:120px}.info-item[data-v-24a50078]{display:flex;justify-content:space-between;align-items:center;padding:4px 0}.label[data-v-24a50078]{color:#888;font-size:18px}.value[data-v-24a50078]{color:#e0e0e0;font-size:18px;font-weight:500}.currency-display[data-v-24a50078]{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.coin-item[data-v-24a50078]{display:flex;align-items:center;gap:2px}.coin-icon[data-v-24a50078]{width:16px;height:16px;object-fit:contain}.coin-value[data-v-24a50078]{color:#e0e0e0;font-size:16px;font-weight:500}.attributes-grid[data-v-24a50078]{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.attribute-item[data-v-24a50078]{display:flex;flex-direction:column;align-items:center;padding:4px;background:#2a2a2a;border-radius:6px;text-align:center}.emoji[data-v-24a50078]{font-size:32px}.attribute-item .value[data-v-24a50078]{font-size:20px;font-weight:600}.status-values[data-v-24a50078]{display:flex;flex-direction:column;gap:8px}.status-item[data-v-24a50078]{display:flex;align-items:center;gap:8px}.status-item .label[data-v-24a50078]{min-width:70px;flex-shrink:0;font-size:18px;color:#888}.body-status[data-v-24a50078]{color:#e0e0e0;font-size:18px}.temp-effects[data-v-24a50078]{display:flex;flex-direction:column;gap:8px}.effect-item[data-v-24a50078]{padding:8px;background:#2a2a2a;border-radius:6px;border:1px solid #444}.effect-header[data-v-24a50078]{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}.effect-duration[data-v-24a50078]{color:#999;font-size:15px;font-weight:400}.effect-description[data-v-24a50078]{color:#ddd;font-size:16px;line-height:1.5}.no-effects[data-v-24a50078]{color:#888;font-size:16px;font-style:italic;padding:12px 0;text-align:center}@media (max-width:768px){.grid-container[data-v-24a50078]{grid-template-columns:1fr}.attributes-grid[data-v-24a50078]{grid-template-columns:repeat(6,1fr)}}
 
 .items-panel[data-v-5efefbea]{display:flex;flex-direction:column;gap:20px;padding:16px}.inventory-section[data-v-5efefbea]{display:flex;flex-direction:column;gap:12px}.section-title[data-v-5efefbea]{color:#e0e0e0;font-size:20px;font-weight:600;margin:0}.items-grid[data-v-5efefbea]{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(auto-fill,80px);gap:8px;width:100%;min-height:88px}.item-container[data-v-5efefbea]{display:flex;flex-direction:column;align-items:center;gap:4px}.item-name[data-v-5efefbea]{font-size:14px;color:#ccc;text-align:center;line-height:1.2;word-break:break-word;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin:0}.item-slot[data-v-5efefbea]{position:relative;width:56px;height:56px;background:#1a1a1a;border:2px solid #333;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s ease;font-size:20px}.item-slot[data-v-5efefbea]:hover{border-color:#555;background:#222;transform:scale(1.05)}.item-slot.empty[data-v-5efefbea]{background:#111;border-color:#222}.item-slot.empty[data-v-5efefbea]:hover{border-color:#333;background:#1a1a1a}.equipped-badge[data-v-5efefbea]{position:absolute;top:-2px;left:-2px;background:#ff6b35;color:white;font-size:12px;font-weight:bold;padding:1px 3px;border-radius:2px;z-index:1}.item-icon[data-v-5efefbea]{width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 0 2px rgba(0,0,0,0.5))}.item-quantity[data-v-5efefbea]{position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,0.8);color:#fff;font-size:10px;font-weight:bold;padding:1px 3px;border-radius:2px;min-width:12px;text-align:center}.rarity-common[data-v-5efefbea]{border-color:#888}.rarity-uncommon[data-v-5efefbea]{border-color:#4ade80;box-shadow:0 0 4px rgba(74,222,128,0.3)}.rarity-rare[data-v-5efefbea]{border-color:#3b82f6;box-shadow:0 0 6px rgba(59,130,246,0.4)}.rarity-epic[data-v-5efefbea]{border-color:#a855f7;box-shadow:0 0 8px rgba(168,85,247,0.5)}.rarity-legendary[data-v-5efefbea]{border-color:#f59e0b;box-shadow:0 0 10px rgba(245,158,11,0.6)}.rarity-quest[data-v-5efefbea]{border-color:#fbbf24;box-shadow:0 0 12px rgba(251,191,36,0.7);background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(251,191,36,0.05))}.item-tooltip[data-v-5efefbea]{position:fixed;background:#2a2a2a;border:1px solid #444;border-radius:6px;padding:12px;max-width:300px;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.5);pointer-events:none}.tooltip-header[data-v-5efefbea]{display:flex;align-items:center;gap:8px;margin-bottom:8px}.tooltip-name[data-v-5efefbea]{font-weight:600;font-size:18px}.tooltip-tier[data-v-5efefbea]{font-size:16px;padding:2px 6px;border-radius:3px;font-weight:500;text-shadow:0 0 4px currentColor}.tooltip-description[data-v-5efefbea]{color:#ccc;font-size:16px;line-height:1.4;margin-bottom:8px}.tooltip-effects[data-v-5efefbea]{margin-bottom:8px}.tooltip-effect[data-v-5efefbea]{display:flex;gap:8px;margin-bottom:4px}.tooltip-effect[data-v-5efefbea]:last-child{margin-bottom:0}.effect-name[data-v-5efefbea]{color:#e0e0e0;font-weight:500;font-size:16px;min-width:60px}.effect-desc[data-v-5efefbea]{color:#bbb;font-size:16px;flex:1}.tooltip-attributes[data-v-5efefbea]{border-top:1px solid #444;padding-top:8px}.attribute-bonus[data-v-5efefbea]{color:#4ade80;font-size:16px;margin-bottom:2px}.attribute-bonus[data-v-5efefbea]:last-child{margin-bottom:0}@media (max-width:768px){.items-panel[data-v-5efefbea]{padding:12px}.items-grid[data-v-5efefbea]{grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(auto-fill,72px)}.item-slot[data-v-5efefbea]{width:48px;height:48px}.item-icon[data-v-5efefbea]{font-size:24px}.item-name[data-v-5efefbea]{font-size:14px;max-height:16px}.item-tooltip[data-v-5efefbea]{max-width:250px;padding:10px}}@media (max-width:480px){.items-grid[data-v-5efefbea]{grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(auto-fill,68px)}.item-slot[data-v-5efefbea]{width:44px;height:44px}.item-icon[data-v-5efefbea]{font-size:20px}.item-name[data-v-5efefbea]{font-size:14px;max-height:14px}}
 
@@ -2725,9 +2726,9 @@ $(() => {
 
 .quests-panel[data-v-3a478b72]{display:flex;flex-direction:column;gap:12px}.quests-list[data-v-3a478b72]{display:flex;flex-direction:column;gap:8px}.completed-quests-grid[data-v-3a478b72]{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid #444;border-radius:6px;overflow:hidden}.quest-item[data-v-3a478b72]{background:#333;border-radius:6px;padding:8px 12px}.completed-quest-item[data-v-3a478b72]{background:#2a2a2a;padding:8px 12px;border-right:1px solid #444;border-bottom:1px solid #444}.completed-quest-item[data-v-3a478b72]:nth-child(3n){border-right:none}.completed-quest-item[data-v-3a478b72]:nth-last-child(-n+3){border-bottom:none}.quest-header[data-v-3a478b72]{display:flex;align-items:center;justify-content:space-between;gap:8px}.quest-name[data-v-3a478b72]{color:#e0e0e0;font-size:20px;font-weight:500;margin-bottom:6px}.quest-badges[data-v-3a478b72]{display:flex;gap:6px;margin-bottom:6px}.quest-details[data-v-3a478b72]{margin-top:8px}.quest-description[data-v-3a478b72]{color:#ccc;font-size:16px;line-height:1.4;margin-bottom:6px}.quest-details-hover[data-v-3a478b72]{opacity:0;max-height:0;overflow:hidden;transition:all 0.3s ease}.completed-quest-item:hover .quest-details-hover[data-v-3a478b72]{opacity:1;max-height:200px}.quest-type[data-v-3a478b72]{display:flex;align-items:center;gap:4px;margin-bottom:6px}.type-label[data-v-3a478b72]{color:#52c41a;font-size:16px;font-weight:600}.type-text[data-v-3a478b72]{color:#e0e0e0;font-size:16px}.quest-deadline[data-v-3a478b72]{display:flex;align-items:center;gap:4px;margin-bottom:6px}.deadline-label[data-v-3a478b72]{color:#faad14;font-size:16px;font-weight:600}.deadline-text[data-v-3a478b72]{color:#e0e0e0;font-size:16px}.quest-conditions[data-v-3a478b72],.quest-reward[data-v-3a478b72]{margin-bottom:6px}.conditions-label[data-v-3a478b72],.reward-label[data-v-3a478b72]{color:#52c41a;font-size:16px;font-weight:600;margin-bottom:4px}.conditions-list[data-v-3a478b72],.reward-list[data-v-3a478b72]{list-style:none;padding:0;margin:0}.condition-item[data-v-3a478b72],.reward-item[data-v-3a478b72]{color:#e0e0e0;font-size:16px;line-height:1.4;padding:2px 0}.no-data[data-v-3a478b72]{color:#666;font-size:18px;font-style:italic;text-align:center;padding:16px}
 
-.companions-panel[data-v-2d333f2c]{display:flex;flex-direction:column;gap:12px}.companions-list[data-v-2d333f2c],.npcs-list[data-v-2d333f2c]{display:flex;flex-direction:column;gap:8px}.companion-card[data-v-2d333f2c]{background:#2a2a2a;border-radius:6px;padding:12px;border:1px solid #444}.npc-row[data-v-2d333f2c]{background:#2a2a2a;border-radius:6px;padding:8px 12px;border:1px solid #444}.companion-header[data-v-2d333f2c]{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.companion-info[data-v-2d333f2c]{display:flex;flex-direction:row;align-items:center;gap:6px;flex:1;flex-wrap:wrap}.companion-name[data-v-2d333f2c]{color:#e0e0e0;font-size:22px}.companion-meta[data-v-2d333f2c]{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.companion-stats[data-v-2d333f2c]{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.stat-row[data-v-2d333f2c]{display:flex;align-items:center;gap:8px}.stat-label[data-v-2d333f2c]{color:#ccc;font-size:16px;font-weight:500;min-width:50px;flex-shrink:0}.companion-details[data-v-2d333f2c]{display:flex;flex-direction:column;gap:8px}.detail-row[data-v-2d333f2c]{display:flex;align-items:flex-start;gap:8px}.detail-label[data-v-2d333f2c]{color:#ccc;font-size:16px;font-weight:500;min-width:60px;flex-shrink:0}.detail-value[data-v-2d333f2c]{color:#e0e0e0;font-size:16px;line-height:1.4;flex:1}.temp-effects[data-v-2d333f2c]{margin-top:4px}.effects-grid[data-v-2d333f2c]{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin-top:4px}.backpack[data-v-2d333f2c]{margin-top:4px}.items-grid[data-v-2d333f2c]{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(auto-fill,80px);gap:8px;width:100%;min-height:88px}.item-container[data-v-2d333f2c]{display:flex;flex-direction:column;align-items:center;gap:4px}.item-slot[data-v-2d333f2c]{position:relative;width:56px;height:56px;background:#1a1a1a;border:2px solid #333;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s ease;font-size:20px}.item-name[data-v-2d333f2c]{font-size:16px;color:#ccc;text-align:center;line-height:1.2;word-break:break-word;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin:0}.item-slot[data-v-2d333f2c]:hover{border-color:#555;background:#222;transform:scale(1.05)}.item-slot.empty[data-v-2d333f2c]{background:#111;border-color:#222}.item-slot.empty[data-v-2d333f2c]:hover{border-color:#333;background:#1a1a1a}.item-icon[data-v-2d333f2c]{width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 0 2px rgba(0,0,0,0.5))}.item-quantity[data-v-2d333f2c]{position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,0.8);color:#fff;font-size:12px;font-weight:bold;padding:1px 3px;border-radius:2px;min-width:12px;text-align:center}.rarity-common[data-v-2d333f2c]{border-color:#888}.rarity-uncommon[data-v-2d333f2c]{border-color:#4ade80;box-shadow:0 0 4px rgba(74,222,128,0.3)}.rarity-rare[data-v-2d333f2c]{border-color:#3b82f6;box-shadow:0 0 6px rgba(59,130,246,0.4)}.rarity-epic[data-v-2d333f2c]{border-color:#a855f7;box-shadow:0 0 8px rgba(168,85,247,0.5)}.rarity-legendary[data-v-2d333f2c]{border-color:#f59e0b;box-shadow:0 0 10px rgba(245,158,11,0.6)}.rarity-quest[data-v-2d333f2c]{border-color:#fbbf24;box-shadow:0 0 12px rgba(251,191,36,0.7);background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(251,191,36,0.05))}.npc-info[data-v-2d333f2c]{display:flex;flex-direction:column;gap:4px;flex:1}.npc-name[data-v-2d333f2c]{color:#e0e0e0;font-size:22px;font-weight:500}.npc-meta[data-v-2d333f2c]{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.npc-details[data-v-2d333f2c]{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #444}.no-data[data-v-2d333f2c]{color:#666;font-size:16px;font-style:italic;text-align:center;padding:16px}.rarity-common[data-v-2d333f2c]{border-color:#888;background:rgba(136,136,136,0.1)}.rarity-uncommon[data-v-2d333f2c]{border-color:#4ade80;background:rgba(74,222,128,0.1);box-shadow:0 0 4px rgba(74,222,128,0.3)}.rarity-rare[data-v-2d333f2c]{border-color:#3b82f6;background:rgba(59,130,246,0.1);box-shadow:0 0 6px rgba(59,130,246,0.4)}.rarity-epic[data-v-2d333f2c]{border-color:#a855f7;background:rgba(168,85,247,0.1);box-shadow:0 0 8px rgba(168,85,247,0.5)}.rarity-legendary[data-v-2d333f2c]{border-color:#f59e0b;background:rgba(245,158,11,0.1);box-shadow:0 0 10px rgba(245,158,11,0.6)}.rarity-quest[data-v-2d333f2c]{border-color:#fbbf24;background:rgba(251,191,36,0.1);box-shadow:0 0 12px rgba(251,191,36,0.7)}.item-tooltip[data-v-2d333f2c]{position:fixed;background:#2a2a2a;border:1px solid #444;border-radius:6px;padding:12px;max-width:300px;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.5);pointer-events:none}.tooltip-header[data-v-2d333f2c]{display:flex;align-items:center;gap:8px;margin-bottom:8px}.tooltip-name[data-v-2d333f2c]{font-weight:600;font-size:14px}.tooltip-tier[data-v-2d333f2c]{font-size:16px;padding:2px 6px;border-radius:3px;font-weight:500;text-shadow:0 0 4px currentColor}.tooltip-description[data-v-2d333f2c]{color:#ccc;font-size:17px;line-height:1.4;margin-bottom:8px}.tooltip-effects[data-v-2d333f2c]{margin-bottom:8px}.tooltip-effect[data-v-2d333f2c]{display:flex;gap:8px;margin-bottom:4px}.tooltip-effect[data-v-2d333f2c]:last-child{margin-bottom:0}.effect-name[data-v-2d333f2c]{color:#e0e0e0;font-weight:500;font-size:16px;min-width:60px}.effect-desc[data-v-2d333f2c]{color:#bbb;font-size:16px;flex:1}.tooltip-attributes[data-v-2d333f2c]{border-top:1px solid #444;padding-top:8px}.attribute-bonus[data-v-2d333f2c]{color:#4ade80;font-size:16px;margin-bottom:2px}.attribute-bonus[data-v-2d333f2c]:last-child{margin-bottom:0}@media (max-width:768px){.companion-header[data-v-2d333f2c]{flex-direction:column;align-items:flex-start;gap:4px}.companion-meta[data-v-2d333f2c]{flex-direction:column;align-items:flex-start;gap:2px}.effects-grid[data-v-2d333f2c]{grid-template-columns:1fr}.items-grid[data-v-2d333f2c]{grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(auto-fill,72px)}.item-slot[data-v-2d333f2c]{width:48px;height:48px}.item-icon[data-v-2d333f2c]{width:24px;height:24px}.item-name[data-v-2d333f2c]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.item-tooltip[data-v-2d333f2c]{max-width:250px;padding:10px}}@media (max-width:480px){.items-grid[data-v-2d333f2c]{grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(auto-fill,68px)}.item-slot[data-v-2d333f2c]{width:44px;height:44px}.item-icon[data-v-2d333f2c]{width:20px;height:20px}.item-name[data-v-2d333f2c]{max-height:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.companions-panel[data-v-e272ef34]{display:flex;flex-direction:column;gap:12px}.companions-list[data-v-e272ef34],.npcs-list[data-v-e272ef34]{display:flex;flex-direction:column;gap:8px}.companion-card[data-v-e272ef34]{background:#2a2a2a;border-radius:6px;padding:12px;border:1px solid #444}.npc-row[data-v-e272ef34]{background:#2a2a2a;border-radius:6px;padding:8px 12px;border:1px solid #444}.companion-header[data-v-e272ef34]{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.companion-info[data-v-e272ef34]{display:flex;flex-direction:row;align-items:center;gap:6px;flex:1;flex-wrap:wrap}.companion-name[data-v-e272ef34]{color:#e0e0e0;font-size:22px}.companion-meta[data-v-e272ef34]{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.companion-stats[data-v-e272ef34]{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.stat-row[data-v-e272ef34]{display:flex;align-items:center;gap:8px}.stat-label[data-v-e272ef34]{color:#ccc;font-size:16px;font-weight:500;min-width:50px;flex-shrink:0}.companion-details[data-v-e272ef34]{display:flex;flex-direction:column;gap:8px}.detail-row[data-v-e272ef34]{display:flex;align-items:flex-start;gap:8px}.detail-label[data-v-e272ef34]{color:#ccc;font-size:16px;font-weight:500;min-width:60px;flex-shrink:0}.detail-value[data-v-e272ef34]{color:#e0e0e0;font-size:16px;line-height:1.4;flex:1}.temp-effects[data-v-e272ef34]{margin-top:4px}.effects-grid[data-v-e272ef34]{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin-top:4px}.backpack[data-v-e272ef34]{margin-top:4px}.items-grid[data-v-e272ef34]{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(auto-fill,80px);gap:8px;width:100%;min-height:88px}.item-container[data-v-e272ef34]{display:flex;flex-direction:column;align-items:center;gap:4px}.item-slot[data-v-e272ef34]{position:relative;width:56px;height:56px;background:#1a1a1a;border:2px solid #333;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s ease;font-size:20px}.item-name[data-v-e272ef34]{font-size:16px;color:#ccc;text-align:center;line-height:1;word-break:break-word;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin:0}.item-slot[data-v-e272ef34]:hover{border-color:#555;background:#222;transform:scale(1.05)}.item-slot.empty[data-v-e272ef34]{background:#111;border-color:#222}.item-slot.empty[data-v-e272ef34]:hover{border-color:#333;background:#1a1a1a}.item-icon[data-v-e272ef34]{width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 0 2px rgba(0,0,0,0.5))}.item-quantity[data-v-e272ef34]{position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,0.8);color:#fff;font-size:12px;font-weight:bold;padding:1px 3px;border-radius:2px;min-width:12px;text-align:center}.rarity-common[data-v-e272ef34]{border-color:#888}.rarity-uncommon[data-v-e272ef34]{border-color:#4ade80;box-shadow:0 0 4px rgba(74,222,128,0.3)}.rarity-rare[data-v-e272ef34]{border-color:#3b82f6;box-shadow:0 0 6px rgba(59,130,246,0.4)}.rarity-epic[data-v-e272ef34]{border-color:#a855f7;box-shadow:0 0 8px rgba(168,85,247,0.5)}.rarity-legendary[data-v-e272ef34]{border-color:#f59e0b;box-shadow:0 0 10px rgba(245,158,11,0.6)}.rarity-quest[data-v-e272ef34]{border-color:#fbbf24;box-shadow:0 0 12px rgba(251,191,36,0.7);background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(251,191,36,0.05))}.npc-info[data-v-e272ef34]{display:flex;flex-direction:column;gap:4px;flex:1}.npc-name[data-v-e272ef34]{color:#e0e0e0;font-size:22px;font-weight:500}.npc-meta[data-v-e272ef34]{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.npc-details[data-v-e272ef34]{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #444}.no-data[data-v-e272ef34]{color:#666;font-size:16px;font-style:italic;text-align:center;padding:16px}.rarity-common[data-v-e272ef34]{border-color:#888;background:rgba(136,136,136,0.1)}.rarity-uncommon[data-v-e272ef34]{border-color:#4ade80;background:rgba(74,222,128,0.1);box-shadow:0 0 4px rgba(74,222,128,0.3)}.rarity-rare[data-v-e272ef34]{border-color:#3b82f6;background:rgba(59,130,246,0.1);box-shadow:0 0 6px rgba(59,130,246,0.4)}.rarity-epic[data-v-e272ef34]{border-color:#a855f7;background:rgba(168,85,247,0.1);box-shadow:0 0 8px rgba(168,85,247,0.5)}.rarity-legendary[data-v-e272ef34]{border-color:#f59e0b;background:rgba(245,158,11,0.1);box-shadow:0 0 10px rgba(245,158,11,0.6)}.rarity-quest[data-v-e272ef34]{border-color:#fbbf24;background:rgba(251,191,36,0.1);box-shadow:0 0 12px rgba(251,191,36,0.7)}.item-tooltip[data-v-e272ef34]{position:fixed;background:#2a2a2a;border:1px solid #444;border-radius:6px;padding:12px;max-width:300px;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.5);pointer-events:none}.tooltip-header[data-v-e272ef34]{display:flex;align-items:center;gap:8px;margin-bottom:8px}.tooltip-name[data-v-e272ef34]{font-weight:600;font-size:14px}.tooltip-tier[data-v-e272ef34]{font-size:16px;padding:2px 6px;border-radius:3px;font-weight:500;text-shadow:0 0 4px currentColor}.tooltip-description[data-v-e272ef34]{color:#ccc;font-size:17px;line-height:1.4;margin-bottom:8px}.tooltip-effects[data-v-e272ef34]{margin-bottom:8px}.tooltip-effect[data-v-e272ef34]{display:flex;gap:8px;margin-bottom:4px}.tooltip-effect[data-v-e272ef34]:last-child{margin-bottom:0}.effect-name[data-v-e272ef34]{color:#e0e0e0;font-weight:500;font-size:16px;min-width:60px}.effect-desc[data-v-e272ef34]{color:#bbb;font-size:16px;flex:1}.tooltip-attributes[data-v-e272ef34]{border-top:1px solid #444;padding-top:8px}.attribute-bonus[data-v-e272ef34]{color:#4ade80;font-size:16px;margin-bottom:2px}.attribute-bonus[data-v-e272ef34]:last-child{margin-bottom:0}@media (max-width:768px){.companion-header[data-v-e272ef34]{flex-direction:column;align-items:flex-start;gap:4px}.companion-meta[data-v-e272ef34]{flex-direction:column;align-items:flex-start;gap:2px}.effects-grid[data-v-e272ef34]{grid-template-columns:1fr}.items-grid[data-v-e272ef34]{grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(auto-fill,72px)}.item-slot[data-v-e272ef34]{width:48px;height:48px}.item-icon[data-v-e272ef34]{width:24px;height:24px}.item-name[data-v-e272ef34]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.item-tooltip[data-v-e272ef34]{max-width:250px;padding:10px}}@media (max-width:480px){.items-grid[data-v-e272ef34]{grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(auto-fill,68px)}.item-slot[data-v-e272ef34]{width:44px;height:44px}.item-icon[data-v-e272ef34]{width:20px;height:20px}.item-name[data-v-e272ef34]{max-height:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 
-.app-container[data-v-dbcd0e5a]{position:relative;width:100%;display:flex;flex-direction:column}.status-bar[data-v-dbcd0e5a]{background:#1a1a1a;color:#e0e0e0;border-radius:8px;padding:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.4;max-width:100%;box-sizing:border-box}.content[data-v-dbcd0e5a]{margin-top:12px}.placeholder[data-v-dbcd0e5a]{text-align:center;padding:24px;color:#888;font-style:italic}
+.app-container[data-v-b157476e]{position:relative;width:100%;display:flex;flex-direction:column}.status-bar[data-v-b157476e]{background:#1a1a1a;color:#e0e0e0;border-radius:8px;padding:12px;font-size:14px;line-height:1.4;max-width:100%;box-sizing:border-box}.content[data-v-b157476e]{margin-top:12px}.placeholder[data-v-b157476e]{text-align:center;padding:24px;color:#888;font-style:italic}
 
 body{font-family:'WenQuanYi Bitmap Song 12px';font-weight:normal}*{font-family:inherit}h1,h2,h3,h4,h5,h6{font-family:'WenQuanYi Bitmap Song 12px';font-weight:normal}p,span,div,label,input,textarea,button,select,option{font-family:'WenQuanYi Bitmap Song 12px';font-weight:normal}
 
